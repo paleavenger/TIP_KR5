@@ -3,15 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <title>Дневник настроения</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        form { margin-bottom: 20px; }
+        input, textarea, select, button { margin: 5px 0; display: block; width: 300px; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; }
+        button.delete-btn { width: auto; margin-left: 10px; }
+    </style>
 </head>
 <body>
 <h1>Дневник настроения</h1>
-<ul>
-    <li>GET /api/moods</li>
-    <li>GET /api/moods?mood=happy</li>
-    <li>GET /api/moods/:id</li>
-    <li>POST /api/moods</li>
-    <li>DELETE /api/moods/:id</li>
-</ul>
+
+<form id="moodForm">
+    <label for="mood">Настроение:</label>
+    <select id="mood" required>
+        <option value="">--Выберите--</option>
+        <option value="happy">Счастливое</option>
+        <option value="sad">Грустное</option>
+        <option value="neutral">Нейтральное</option>
+    </select>
+
+    <label for="note">Комментарий:</label>
+    <textarea id="note" rows="2"></textarea>
+
+    <button type="submit">Добавить запись</button>
+</form>
+
+<h2>Все записи</h2>
+<ul id="moodList"></ul>
+
+<script>
+    const form = document.getElementById('moodForm');
+    const moodList = document.getElementById('moodList');
+
+    // Получение всех записей
+    async function fetchMoods() {
+        const res = await fetch('/api/moods');
+        const data = await res.json();
+        moodList.innerHTML = '';
+        data.forEach(m => {
+            const li = document.createElement('li');
+            li.textContent = `[${m.mood}] ${m.note} (${new Date(m.date).toLocaleString()})`;
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Удалить';
+            delBtn.className = 'delete-btn';
+            delBtn.onclick = async () => {
+                await fetch(`/api/moods/${m.id}`, { method: 'DELETE' });
+                fetchMoods();
+            };
+
+            li.appendChild(delBtn);
+            moodList.appendChild(li);
+        });
+    }
+
+    fetchMoods();
+
+    // Добавление новой записи
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const mood = document.getElementById('mood').value;
+        const note = document.getElementById('note').value;
+
+        if (!mood) return alert('Выберите настроение');
+
+        await fetch('/api/moods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mood, note })
+        });
+
+        form.reset();
+        fetchMoods();
+    });
+</script>
 </body>
 </html>
